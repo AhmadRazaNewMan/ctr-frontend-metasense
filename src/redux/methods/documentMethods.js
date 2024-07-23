@@ -141,6 +141,7 @@ export const checkJobStatus = () => {
       do {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const statusResponse = await axios.get(
+          console.log("get current status")
           `${BASE_URL}/api/document/status`
         );
 
