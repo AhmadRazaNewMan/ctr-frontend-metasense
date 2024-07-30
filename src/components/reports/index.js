@@ -133,7 +133,7 @@ export default function Reports() {
       },
     },
     {
-      title: "Reported by Admin",
+      title: "Changes",
       dataIndex: "reported_by_admin",
       key: "reported_by_admin",
       render: (_, record) => (
@@ -181,8 +181,8 @@ export default function Reports() {
             <div className="flex flex-col">
               <div className="flex font-bold bg-gray-200 border-b border-gray-300">
                 <div className="flex-1 p-2 border-r border-gray-300 truncate">Field Name</div>
-                <div className="flex-1 p-2 border-r border-gray-300 truncate">Old Data</div>
-                <div className="flex-1 p-2 truncate">New Data</div>
+                <div className="flex-1 p-2 border-r border-gray-300 truncate">Original Data</div>
+                <div className="flex-1 p-2 truncate">Reported Data</div>
               </div>
               {fieldData.map(({ key, oldValue, newValue }) => (
                 <div className="flex border-b border-gray-300" key={key}>
