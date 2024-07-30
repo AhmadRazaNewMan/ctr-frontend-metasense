@@ -1,21 +1,28 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ProTable } from "@ant-design/pro-components";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Form, Input, Modal, Select as AntdSelect } from "antd";
 import { toast } from "sonner";
 import axios from "axios";
 import Select from "react-select";
 
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import styled from "styled-components";
+
 // Components
+import { BASE_URL } from "../../redux/constants/constants";
 import BasePageContainer from "../layout/PageContainer";
 import { webRoutes } from "../../routes/web";
+import Loader from "../loader";
 import {
   addColumn,
   exportDocument,
   getStructuredDocuments,
 } from "../../redux/methods/documentMethods";
-import { BASE_URL } from "../../redux/constants/constants";
+
+//Supabase base
+import { supabase } from "../../config/supabase";
 
 const breadcrumb = {
   items: [
@@ -30,7 +37,196 @@ const breadcrumb = {
   ],
 };
 
-export default function Documents() {
+const DraggableTable = ({ columns, rows, onviewReporting }) => {
+  const [cols, setCols] = useState(columns);
+  const [dragOver, setDragOver] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [colOrder, setColOrder] = useState({});
+
+  useEffect(() => {
+    const fetchColumnOrder = async () => {
+      const { data, error } = await supabase
+        .from("column_orders")
+        .select("column_order")
+        .single();
+
+      if (data && data.column_order) {
+        const orderedColumns = Object.keys(data.column_order)
+          .sort((a, b) => data.column_order[a] - data.column_order[b])
+          .map((col) => columns.find((c) => c.dataIndex === col));
+        setCols(orderedColumns);
+      } else if (error) {
+        console.error("Error fetching column order:", error);
+      }
+    };
+
+    fetchColumnOrder();
+  }, [columns]);
+
+  const handleDragStart = (e, idx) => {
+    e.dataTransfer.setData("colIdx", idx);
+  };
+
+  const handleDragOver = (e) => e.preventDefault();
+
+  const handleDragEnter = (e) => {
+    const { id } = e.target;
+    setDragOver(id);
+  };
+
+  const handleOnDrop = async (e, droppedColIdx) => {
+    const draggedColIdx = e.dataTransfer.getData("colIdx");
+    const tempCols = [...cols];
+
+    // Swap columns
+    [tempCols[draggedColIdx], tempCols[droppedColIdx]] = [
+      tempCols[droppedColIdx],
+      tempCols[draggedColIdx],
+    ];
+
+    setCols(tempCols);
+    setDragOver("");
+
+    // Log column names and order
+    logColumnOrder(tempCols);
+
+    // Save the new order to the database
+    saveColumnOrder(tempCols);
+  };
+
+  const logColumnOrder = (columns) => {
+    const newOrder = {};
+    columns.forEach((col, index) => {
+      newOrder[col.dataIndex] = index;
+    });
+    setColOrder(newOrder);
+  };
+
+  const saveColumnOrder = async (columnList) => {
+    const column_order = columnList.reduce((acc, col, index) => {
+      acc[col.dataIndex] = index;
+      return acc;
+    }, {});
+
+    const { data, error } = await supabase
+      .from("column_orders")
+      .upsert({ id: "e4e2cecb-b8dd-4e02-94ae-6b09f94dbf2a", column_order });
+
+    if (error) {
+      console.error("Error saving column order:", error);
+    } else {
+      console.log("Column order saved:", data);
+    }
+  };
+
+  // Calculate the paginated rows
+  const paginatedRows = rows.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+  const totalPages = Math.ceil(rows.length / pageSize);
+
+  return (
+    <>
+      <TableWrapper>
+        <Table>
+          <thead>
+            <tr>
+              {cols
+                .filter((col) => col.dataIndex !== "testing_column")
+                .map((col, idx) => (
+                  <StyledTh
+                    id={col.dataIndex}
+                    key={col.dataIndex}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleOnDrop(e, idx)}
+                    onDragEnter={handleDragEnter}
+                    dragOver={col.dataIndex === dragOver}
+                  >
+                    {col.title}
+                  </StyledTh>
+                ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedRows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {cols
+                  .filter((col) => col.dataIndex !== "testing_column")
+                  .map((col) => (
+                    <StyledTd
+                      key={col.dataIndex}
+                      dragOver={col.dataIndex === dragOver}
+                    >
+                      {col.dataIndex === "reporting" ? (
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            onviewReporting(row);
+                          }}
+                        >
+                          View Reporting
+                        </Button>
+                      ) : col.dataIndex === "viewPDF" ? (
+                        (row.source_1_link !== "-" ||
+                          row.source_2_link !== "-") && (
+                          <Button
+                            type="link"
+                            onClick={() => {
+                              const source1Link = row.source_1_link;
+                              const source2Link = row.source_2_link;
+
+                              if (source1Link !== "-") {
+                                window.open(source1Link, "_blank");
+                              } else if (source2Link !== "-") {
+                                window.open(source2Link, "_blank");
+                              } else {
+                                console.log("No valid source links available.");
+                              }
+                            }}
+                          >
+                            View PDF
+                          </Button>
+                        )
+                      ) : (
+                        row[col.dataIndex]
+                      )}
+                    </StyledTd>
+                  ))}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrapper>
+
+      {/* Pagination Controls */}
+      <Pagination>
+        <Button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </Button>
+        <span>
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          onClick={() =>
+            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+          }
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </Button>
+      </Pagination>
+    </>
+  );
+};
+
+const Documents = () => {
   const [countries, setCountries] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState({});
   const [search, setSearch] = useState("");
@@ -43,12 +239,26 @@ export default function Documents() {
   const [isSkipLoading, setIsSkipLoading] = useState(false);
   const [isOverrideLoading, setIsOverrideLoading] = useState(false);
   const [isAddColumnModalVisible, setIsAddColumnModalVisible] = useState(false);
+  const [isReportingModalVisible, setIsReportingModalVisible] = useState(false);
+  const [currentRecord, setCurrentRecord] = useState(null);
   const [newColumn, setNewColumn] = useState({
     name: "",
     type: "text",
   });
 
-  const actionRef = useRef();
+  const [form] = Form.useForm();
+
+  useEffect(() => {
+    if (currentRecord) {
+      form.setFieldsValue(currentRecord);
+    }
+  }, [currentRecord, form]);
+
+  const onviewReporting = (record) => {
+    setCurrentRecord(record);
+    setIsReportingModalVisible(true);
+  };
+
   const dispatch = useDispatch();
   const { documents, loading } = useSelector(
     (state) => state.getStructuredDocumentsReducer
@@ -131,7 +341,7 @@ export default function Documents() {
       }
     } finally {
       if (conflicts.length === 0) {
-        setIsImporting(false); // End loading if no conflicts are detected
+        setIsImporting(false);
       }
     }
   };
@@ -203,49 +413,31 @@ export default function Documents() {
   // Dynamically generate columns based on document keys
   const generateColumns = (documents) => {
     if (!documents.length) return [];
+    // const excludeColumn = ['testing_column']
     const keys = Object.keys(documents[0]);
-    const defaultColumns = keys.map((key) => ({
-      title: key
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase()),
-      dataIndex: key,
-      sorter: false,
-      align: "center",
-      ellipsis: true,
-      render: (text) => {
-        if (key === "username") {
-          return text.length > 3 ? `${text.slice(0, 3)}...` : text;
-        }
-        return text;
-      },
-    }));
 
-    // Add the "View PDF" column
+    const defaultColumns = keys
+      // .filter(key => !excludeColumn.includes(key)) // Corrected this line
+      .map((key) => ({
+        title: key
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase()),
+        dataIndex: key,
+        sorter: false,
+        align: "center",
+        ellipsis: true,
+        render: (text) => {
+          if (key === "username") {
+            return text.length > 3 ? `${text.slice(0, 3)}...` : text;
+          }
+          return text;
+        },
+      }));
+
+    // Add the "View PDF" column with a unique data index
     defaultColumns.push({
       title: "View PDF",
       dataIndex: "viewPDF",
-      render: (_, record) => {
-        const handleViewPDF = () => {
-          const source1Link = record.source_1_link;
-          const source2Link = record.source_2_link;
-
-          if (source1Link !== "-") {
-            window.open(source1Link, "_blank");
-          } else if (source2Link !== "-") {
-            window.open(source2Link, "_blank");
-          } else {
-            console.log("No valid source links available.");
-          }
-        };
-
-        return (
-          (record.source_1_link !== "-" || record.source_2_link !== "-") && (
-            <Button type="link" onClick={handleViewPDF}>
-              View PDF
-            </Button>
-          )
-        );
-      },
     });
 
     return defaultColumns;
@@ -322,23 +514,17 @@ export default function Documents() {
             </Button>
           </div>
         </div>
-        <ProTable
-          columns={columns}
-          cardBordered={false}
-          bordered={true}
-          showSorterTooltip={false}
-          scroll={{ x: true }}
-          tableLayout={"fixed"}
-          rowSelection={false}
-          pagination={{ showQuickJumper: true, pageSize: 20 }}
-          actionRef={actionRef}
-          dataSource={documents}
-          dateFormatter="string"
-          search={false}
-          rowKey="id"
-          options={true}
-          loading={loading}
-        />
+        {!loading ? (
+          <DndProvider backend={HTML5Backend}>
+            <DraggableTable
+              columns={columns}
+              rows={documents}
+              onviewReporting={onviewReporting}
+            />
+          </DndProvider>
+        ) : (
+          <Loader />
+        )}
       </div>
 
       {/* Import Modal */}
@@ -419,6 +605,129 @@ export default function Documents() {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Reporting Modal  */}
+
+      <Modal
+        title="Reporting"
+        visible={isReportingModalVisible}
+        onCancel={() => {
+          console.log("Cancel");
+          setCurrentRecord(null); // Clear the current record
+          setIsReportingModalVisible(false); // Hide the modal
+          // setNonEditableMessage(false); // Reset the message
+        }}
+        footer={null}
+      >
+        {currentRecord && (
+          <Form
+            form={form}
+            onFinish={async (values) => {
+              try {
+                const response = await axios.post(
+                  `${BASE_URL}/api/document/save-orupdate`,
+                  values
+                );
+                if (response.data.status) {
+                  console.log("Data saved successfully", response.data.data);
+                } else {
+                  console.error("Failed to save data", response.data.msg);
+                }
+              } catch (error) {
+                console.error("Error saving data", error);
+              }
+
+              setIsReportingModalVisible(false);
+            }}
+          >
+            {Object.keys(currentRecord).map((key, index) => (
+              <Form.Item
+                key={key}
+                label={key
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (char) => char.toUpperCase())}
+                name={key}
+              >
+                <Input
+                  disabled={index < 4}
+                  onClick={() => {
+                    if (index < 4) {
+                      // setNonEditableMessage(true);
+                      console.log("Message for non editable message ");
+                    }
+                  }}
+                />
+              </Form.Item>
+            ))}
+            {/* {nonEditableMessage && (
+            <p style={{ color: 'red' }}>The first four fields cannot be changed.</p>
+          )} */}
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{ color: "white", background: "black" }}
+              >
+                Save
+              </Button>
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
     </BasePageContainer>
   );
-}
+};
+
+const TableWrapper = styled.div`
+  overflow-x: auto;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const StyledTh = styled.th`
+  white-space: nowrap;
+  color: #716f88;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  padding: 20px;
+  border-bottom: 2px solid #eef0f5;
+  cursor: pointer;
+  border-left: ${({ dragOver }) => dragOver && "5px solid black"};
+`;
+
+const StyledTd = styled.td`
+  font-size: 14px;
+  text-align: left;
+  padding: 20px;
+  border-bottom: 2px solid #eef0f5;
+t   border-left: ${({ dragOver }) => dragOver && "5px solid black"};
+`;
+
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+
+  & > span {
+    margin: 0 10px;
+  }
+
+  & > button {
+    padding: 8px 16px;
+    margin: 0 5px;
+    font-size: 14px;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+`;
+
+export default Documents;

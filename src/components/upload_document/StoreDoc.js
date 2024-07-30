@@ -76,7 +76,7 @@ export default function StoreDoc({ prevStep }) {
             <code className="language-javascript">
               {`
 fetch(
-  'https://ctr-backend-metasense.vercel.app/api/document/store-structured-data/:id', 
+  'https://cti-backend.azurewebsites.net/api/document/store-structured-data/:id', 
 {
   method: 'POST',
   headers: {

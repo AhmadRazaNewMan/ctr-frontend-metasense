@@ -129,7 +129,7 @@ export default function UploadDoc() {
           <pre className="h-auto md:h-full">
             <code className="language-javascript">
               {`
-fetch('https://ctr-backend-metasense.vercel.app/api/document/upload', {
+fetch('https://cti-backend.azurewebsites.net/api/document/upload', {
   method: 'POST',
   headers: {
     'Content-Type': 'multipart/form-data',
