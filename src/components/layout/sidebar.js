@@ -4,6 +4,8 @@ import { MdUploadFile } from "react-icons/md";
 import { IoDocumentsOutline } from "react-icons/io5";
 import Icon, { UserOutlined } from "@ant-design/icons";
 import { TbReportSearch } from "react-icons/tb";
+import { CiSettings } from "react-icons/ci";
+
 
 
 export const sidebar = [
@@ -49,6 +51,13 @@ export const sidebar = [
   key: webRoutes.reports,
   name: "Reports",
   icon: <TbReportSearch />,
+},
+{
+  path: webRoutes.settings,
+  key: webRoutes.settings,
+  name: "Settings",
+  icon: <CiSettings />
+  ,
 },
 
 ];

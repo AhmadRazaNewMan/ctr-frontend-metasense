@@ -9,5 +9,6 @@ export const webRoutes = {
   uploadDocumentLlama: "/upload-llama",
   uploadDocumentUnstructured: "/upload-unstructured",
   document: "/document",
-  reports:"/reports"
+  reports:"/reports",
+  settings: "/settings",
 };

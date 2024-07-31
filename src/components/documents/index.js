@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Button, Form, Input, Modal, Select as AntdSelect } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  Modal,
+  Select as AntdSelect,
+  Row,
+  Col,
+} from "antd";
 import { toast } from "sonner";
 import axios from "axios";
 import Select from "react-select";
@@ -37,7 +45,7 @@ const breadcrumb = {
   ],
 };
 
-const DraggableTable = ({ columns, rows, onviewReporting }) => {
+const DraggableTable = ({ columns, rows, onviewReporting, handlingNotes }) => {
   const [cols, setCols] = useState(columns);
   const [dragOver, setDragOver] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,6 +199,19 @@ const DraggableTable = ({ columns, rows, onviewReporting }) => {
                             View PDF
                           </Button>
                         )
+                      ) : col.dataIndex === "note" &&
+                        row[col.dataIndex] !== "-" &&
+                        row[col.dataIndex] !== "" ? (
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            // Handle the action when the "See Your Notes" button is clicked
+                            handlingNotes(row[col.dataIndex]);
+                            console.log("See your notes", row[col.dataIndex]);
+                          }}
+                        >
+                          See Your Notes
+                        </Button>
                       ) : (
                         row[col.dataIndex]
                       )}
@@ -245,8 +266,12 @@ const Documents = () => {
     name: "",
     type: "text",
   });
+  const [currentnotesData, setCurrentNotesData] = useState(null);
+  const [isnotesModalvisibale, setIsnotesModalVisible] = useState(false);
 
   const [form] = Form.useForm();
+  const {Option} = Select
+
 
   useEffect(() => {
     if (currentRecord) {
@@ -257,6 +282,11 @@ const Documents = () => {
   const onviewReporting = (record) => {
     setCurrentRecord(record);
     setIsReportingModalVisible(true);
+  };
+  const handlingNotes = (data) => {
+    console.log("Inside the handlingNotes " + data);
+    setCurrentNotesData(data);
+    setIsnotesModalVisible(true);
   };
 
   const dispatch = useDispatch();
@@ -520,6 +550,7 @@ const Documents = () => {
               columns={columns}
               rows={documents}
               onviewReporting={onviewReporting}
+              handlingNotes={handlingNotes}
             />
           </DndProvider>
         ) : (
@@ -609,68 +640,116 @@ const Documents = () => {
       {/* Reporting Modal  */}
 
       <Modal
-        title="Reporting"
-        visible={isReportingModalVisible}
+  title="Reporting"
+  visible={isReportingModalVisible}
+  onCancel={() => {
+    console.log("Cancel");
+    setCurrentRecord(null); // Clear the current record
+    setIsReportingModalVisible(false); // Hide the modal
+    // setNonEditableMessage(false); // Reset the message
+  }}
+  footer={null}
+>
+  {currentRecord && (
+    <Form
+      form={form}
+      onFinish={async (values) => {
+        try {
+          const response = await axios.post(
+            `${BASE_URL}/api/document/save-orupdate`,
+            values
+          );
+          if (response.data.status) {
+            console.log("Data saved successfully", response.data.data);
+          } else {
+            console.error("Failed to save data", response.data.msg);
+          }
+        } catch (error) {
+          console.error("Error saving data", error);
+        }
+
+        setIsReportingModalVisible(false);
+      }}
+    >
+      {Object.keys(currentRecord).map((key, index) => (
+        key !== 'reporting_comments' && key !== 'reason_for_reporting' && (
+          <Form.Item
+            key={key}
+            label={key
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (char) => char.toUpperCase())}
+            name={key}
+          >
+            {key === "note" ? (
+              <Input.TextArea
+                onClick={() => {
+                  if (index < 4) {
+                    // setNonEditableMessage(true);
+                    console.log("Message for non editable message ");
+                  }
+                }}
+              />
+            ) : (
+              <Input
+                disabled={key === "added_date" || key === "created_at" || key === "id" || key === "language_code"}
+              />
+            )}
+          </Form.Item>
+        )
+      ))}
+      <Form.Item
+        label="Reporting Comments"
+        name="reporting_comments"
+        rules={[{ required: true, message: 'Please input your comments!' }]}
+      >
+        <Input.TextArea />
+      </Form.Item>
+      {/* <Form.Item */}
+        {/* label="Reason for Reporting"
+        name="reason_for_reporting"
+        rules={[{ required: true, message: 'Please select a reason!' }]} */}
+      {/* > */}
+        {/* <Select>
+          <Select.Option value="reason1">Reason 1</Select.Option>
+          <Select.Option value="reason2">Reason 2</Select.Option>
+          <Select.Option value="reason3">Reason 3</Select.Option>
+        </Select> */}
+      {/* </Form.Item> */}
+    
+      <Form.Item>
+        <Button
+          type="primary"
+          htmlType="submit"
+          style={{ color: "white", background: "black" }}
+        >
+          Save
+        </Button>
+      </Form.Item>
+    </Form>
+  )}
+</Modal>
+
+
+      {/** Notes Modal */}
+
+      <Modal
+        title="Notes"
+        visible={isnotesModalvisibale}
         onCancel={() => {
           console.log("Cancel");
-          setCurrentRecord(null); // Clear the current record
-          setIsReportingModalVisible(false); // Hide the modal
-          // setNonEditableMessage(false); // Reset the message
+          setCurrentNotesData(null); // Clear the current record
+          setIsnotesModalVisible(false); // Hide the modal
         }}
-        footer={null}
       >
-        {currentRecord && (
+        {currentnotesData && (
           <Form
             form={form}
-            onFinish={async (values) => {
-              try {
-                const response = await axios.post(
-                  `${BASE_URL}/api/document/save-orupdate`,
-                  values
-                );
-                if (response.data.status) {
-                  console.log("Data saved successfully", response.data.data);
-                } else {
-                  console.error("Failed to save data", response.data.msg);
-                }
-              } catch (error) {
-                console.error("Error saving data", error);
-              }
-
-              setIsReportingModalVisible(false);
+            onFinish={() => {
+              setIsnotesModalVisible(false); // Hide the modal after form submission
+              // Handle form submission logic here if needed
             }}
           >
-            {Object.keys(currentRecord).map((key, index) => (
-              <Form.Item
-                key={key}
-                label={key
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (char) => char.toUpperCase())}
-                name={key}
-              >
-                <Input
-                  disabled={index < 4}
-                  onClick={() => {
-                    if (index < 4) {
-                      // setNonEditableMessage(true);
-                      console.log("Message for non editable message ");
-                    }
-                  }}
-                />
-              </Form.Item>
-            ))}
-            {/* {nonEditableMessage && (
-            <p style={{ color: 'red' }}>The first four fields cannot be changed.</p>
-          )} */}
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                style={{ color: "white", background: "black" }}
-              >
-                Save
-              </Button>
-            </Form.Item>
+            <p>{currentnotesData}</p>
           </Form>
         )}
       </Modal>
