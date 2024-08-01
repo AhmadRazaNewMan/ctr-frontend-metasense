@@ -4,7 +4,8 @@ import { BASE_URL } from "../../redux/constants/constants";
 import BasePageContainer from "../layout/PageContainer";
 import { webRoutes } from "../../routes/web";
 import { Button, message, List, Typography } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import Loader from "../loader";
+// import { EditOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 
@@ -34,7 +35,7 @@ export default function Settings() {
       try {
         const response = await axios.get(`${BASE_URL}/api/document/getdropdownoption`);
         setOptions(response.data.data);
-        message.success(response.data.message);
+        // message.success(response.data.message);
       } catch (error) {
         message.error("Failed to fetch dropdown options");
       } finally {
@@ -81,7 +82,7 @@ export default function Settings() {
       <Title level={3}>Add Reason for Reporting</Title>
       <div style={{ marginTop: 20 }}>
         {loading ? (
-          <p>Loading...</p>
+         <Loader/>
         ) : (
           <List
             bordered
