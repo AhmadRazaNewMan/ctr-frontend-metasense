@@ -15,9 +15,10 @@ const breadcrumb = {
       title: <a href={webRoutes.dashboard}>Dashboard</a>,
     },
     {
-      key: webRoutes.reports,
-      title: <a href={webRoutes.reports}>Reports</a>,
+      key: webRoutes.uploadDocument,
+      title: <a href={webRoutes.uploadDocument}>Upload Document</a>,
     },
+    
   ],
 };
 
@@ -25,6 +26,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState([]);
   const [selectedReasons, setSelectedReasons] = useState([]);
+  const [isButtonDisable,setIsButtonDisable] = useState(true)
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -44,9 +46,11 @@ export default function Settings() {
   }, []);
 
   const handleSelectReason = (option) => {
+    setIsButtonDisable(false)
     if (!selectedReasons.find((reason) => reason.id === option.id)) {
       setSelectedReasons((prev) => [...prev, option]);
       message.info(`Selected reason: ${option.question}`);
+      
     } else {
       message.warning("This reason is already selected");
     }
@@ -55,19 +59,19 @@ export default function Settings() {
   const handleSubmit = async () => {
     try {
       const response = await axios.post(`${BASE_URL}/api/document/admin-selected-reasons`, {
-        selectedReasons: selectedReasons.map((reason) => reason.question), // Assuming `question` is the field to be saved
+        selectedReasons: selectedReasons.map((reason) => reason.question), 
       });
 
       if (response.status === 200) {
         message.success(response.data.message);
-        setSelectedReasons([]); // Clear selected reasons after successful submission
+        setSelectedReasons([]); 
+        setIsButtonDisable(true)
       } else {
         throw new Error(response.data.message);
       }
     } catch (error) {
       
-            console.error('Error in adminSelectedReason:', error); // Add this line
-            // res.status(500).json({ message: 'Failed to submit reasons', error: error.message });
+            console.error('Error in adminSelectedReason:', error); 
           }
     
   };
@@ -94,7 +98,7 @@ export default function Settings() {
         )}
       </div>
       <div style={{ marginTop: 20 }}>
-        <Button type="primary" onClick={handleSubmit}style={{text:"white",background:"black"}}>
+        <Button disabled={isButtonDisable}  type={isButtonDisable ? "default" :"primary"} onClick={handleSubmit} style={isButtonDisable ? "" :{background:"black"}}>
           Submit Selected Reasons
         </Button>
       </div>
