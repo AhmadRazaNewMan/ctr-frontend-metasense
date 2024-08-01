@@ -160,15 +160,22 @@ export default function Reports() {
         </Button>
       ),
     },
+    {
+      title: "Reason for Comments",
+      dataIndex: "reason_for_reporting",
+      key: "reason_for_reporting",
+    }
   ];
 
   return (
-    <BasePageContainer breadcrumb={breadcrumb}>
+    <BasePageContainer  breadcrumb={breadcrumb}>
       <Table
+       
         columns={columns}
         dataSource={documents}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
       />
      {/* Modal For Report */}
       <Modal
@@ -233,7 +240,7 @@ export default function Reports() {
         <div className="p-4 max-h-[60vh] overflow-y-auto">
           <div className="flex flex-col">
             <div className="font-bold bg-gray-200 p-2 border-b border-gray-300">
-              Rporting Comments
+              Reporting Comments
             </div>
             <div className="p-2 border-b border-gray-300">{currentNote}</div>
           </div>

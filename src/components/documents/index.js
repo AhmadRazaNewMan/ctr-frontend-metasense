@@ -7,8 +7,6 @@ import {
   Input,
   Modal,
   Select as AntdSelect,
-  Row,
-  Col,
 } from "antd";
 import { toast } from "sonner";
 import axios from "axios";
@@ -347,7 +345,6 @@ const Documents = () => {
     setFile(e.target.files[0]);
     handleImport(e.target.files[0]);
   };
-  let mostRecentarrayForModalDropdown = null;
   useEffect(() => {
     const getAdminSelectedReasonForReportDropDown = async () => {
       try {
