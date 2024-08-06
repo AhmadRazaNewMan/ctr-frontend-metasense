@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { Button, Input, Upload } from "antd";
+import { Button, Input, Upload, Typography } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-
-//Components
 import {
   uploadDocument,
   checkJobStatus,
 } from "../../redux/methods/documentMethods";
+import { AiFillCheckCircle } from "react-icons/ai";
+import { AiFillAlert } from "react-icons/ai";
+
+const { Title, Paragraph } = Typography;
 
 export default function UploadDoc() {
   const [file, setFile] = useState(null);
   const [companyName, setCompanyName] = useState("");
+  const [year, setYear] = useState("");
   const [jobStatusState, setJobStatusState] = useState(null);
 
   const dispatch = useDispatch();
-  const { loading, response, jobStatus, errors } = useSelector(
-    (state) => state.uploadDocumentReducer
+  const { loading, jobStatus, errors } = useSelector(
+    (state) => state.uploadDocumentReducer,
+   
   );
 
   //Display Errors
@@ -44,124 +48,118 @@ export default function UploadDoc() {
     }
   }, [jobStatus]);
 
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  //Functions
+  // Error handling and job status effects remain the same
+
   const handleUploadDocument = async () => {
-    if (!file || !companyName) {
-      toast.error("File and Company Name are required.");
+    if (!file || !companyName || !year) {
+      toast.error("File, Company Name, and Year are required.");
       return;
     }
 
     const formData = new FormData();
     formData.append("document", file);
     formData.append("company_name", companyName);
-
+    formData.append("year", year);
     await dispatch(uploadDocument(formData, "llama"));
 
-    await delay(2000);
-
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     window.location.reload();
   };
 
   return (
-    <div className="mt-5">
-      <div className="flex justify-center items-center">
-        <Upload.Dragger
-          className="h-48 sm:h-52 md:h-56 lg:h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-white w-full sm:w-3/4 md:w-2/3 lg:w-1/2"
-          accept=".pdf"
-          beforeUpload={(file) => {
-            setFile(file);
-            return false;
+    <div className="  bg-white  p-6">
+      <div className="flex items-center ">
+        <Title className="mt-3  text-2xl font-bold leading-8 text-left" level={3}>
+          Create A New Record
+        </Title>
+        <span
+          className={`text-sm mx-4 font-medium ${
+            jobStatus.status === "ONGOING"
+              ? "text-red-500 bg-red-100 px-3 py-1 rounded-md"
+              : "text-green-500 bg-green-100 px-3 py-1 rounded-md"
+          }`}
+        >
+          {jobStatus.status === "ONGOING" ? (
+            <span className="flex items-center">
+              <AiFillAlert className="mr-1" /> System is Busy
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <AiFillCheckCircle className="mr-1" /> System is Available
+            </span>
+          )}
+        </span>
+      </div>
+      <Paragraph className="mb-6 w-5/6 text-[15px] font-light leading-[22.5px] text-[#B0B0B0]">
+        Create a new company record in CTI's database. In order to do that, you
+        will need to provide the company's name, its sustainability report
+        document, and the year for which you want to extract data.
+      </Paragraph>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-[16px] font-bold leading-[24px] mb-1">
+            Company Name:
+          </label>
+          <Input
+            className="w-96  py-2 px-3 border border-gray-300 rounded-md"
+            placeholder="Enter the name of the company"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-[16px] font-bold leading-[24px] mb-1">
+            Reporting Year:
+          </label>
+          <Input
+            className="w-96  py-2 px-3 border border-gray-300 rounded-md"
+            placeholder="Enter the reporting year"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+          />
+        </div>
+        <div className="w-4/6 ">
+          <label className="block text-[16px] font-bold leading-[24px] mb-1">
+            Upload Document:
+          </label>
+          <Upload.Dragger
+            className="  border-gray-300 rounded-md p-8 "
+            accept=".pdf"
+            beforeUpload={(file) => {
+              setFile(file);
+              return false;
+            }}
+          >
+            <p className="text-gray-500 ">
+              Drag PDF file here or click to upload
+            </p>
+          </Upload.Dragger>
+        </div>
+      </div>
+      <div className="flex  justify-between items-center mt-6">
+        <Button
+          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          onClick={() => {
+            setFile(null);
+            setCompanyName("");
+            setYear("");
           }}
         >
-          <p className="font-bold font-lato">
-            Drag PDF file here or click to upload.
-          </p>
-        </Upload.Dragger>
-      </div>
-
-      <div className="mt-5">
-        <p className="block text-sm font-bold font-poppins text-gray-900">
-          Company Name
-        </p>
-        <Input
-          className="bg-gray-50 font-lato text-gray-900 sm:text-sm py-1.5 w-80"
-          placeholder="Enter Company Name"
-          onChange={(e) => setCompanyName(e.target.value)}
-        />
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-        }}
-      >
+          Reset
+        </Button>
         <Button
-          className="mt-4 bg-black"
+          className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
           type="primary"
-          size="large"
           loading={loading}
           onClick={handleUploadDocument}
           disabled={jobStatus.status === "ONGOING"}
         >
-          Execute
+          Start Processing
         </Button>
-        <p className="pl-5 font-poppins font-medium text-md">
-          {jobStatus.status === "ONGOING" ? (
-            <span className="text-red-500">
-              System currently processing document JobId {jobStatus.jobId},
-              please wait.
-            </span>
-          ) : (
-            <span className="text-green-500">System Available</span>
-          )}
-        </p>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div className="h-auto md:h-full">
-          <p className="block text-sm font-bold font-poppins text-gray-900">
-            Request
-          </p>
-          <pre className="h-auto md:h-full">
-            <code className="language-javascript">
-              {`
-fetch('https://cti-backend.azurewebsites.net/api/document/upload', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'multipart/form-data',
-  },
-  file: [PDF file]
-  company_name: "Document Title"
-})
-.then(response => response.json())
-.then(data => console.log(data));
-`}
-            </code>
-          </pre>
-        </div>
-        <div className="h-auto md:h-full">
-          <p className="block text-sm font-bold font-poppins text-gray-900">
-            Response
-          </p>
-          <pre className="h-auto md:h-full">
-            <code className="language-javascript">
-              {jobStatusState !== null &&
-              Object.keys(jobStatusState).length !== 0 ? (
-                <pre>{JSON.stringify(jobStatusState, null, 2)}</pre>
-              ) : Object.keys(response).length === 0 ? (
-                ""
-              ) : response ? (
-                <pre>{JSON.stringify(response, null, 2)}</pre>
-              ) : (
-                ""
-              )}
-            </code>
-          </pre>
-        </div>
+      <div>
+        
       </div>
     </div>
   );

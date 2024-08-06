@@ -75,8 +75,8 @@ export default function StoreDoc({ prevStep }) {
           <pre className="h-auto md:h-full">
             <code className="language-javascript">
               {`
-fetch(
-  'https://cti-backend.azurewebsites.net/api/document/store-structured-data/:id', 
+         fetch(
+              'https://cti-backend.azurewebsites.net/api/document/store-structured-data/:id', 
 {
   method: 'POST',
   headers: {

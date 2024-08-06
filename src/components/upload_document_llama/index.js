@@ -27,10 +27,7 @@ const breadcrumb = {
 };
 
 export default function UploadDocumentLlama() {
-  const [currentStep, setCurrentStep] = useState(0);
 
-  const nextStep = () => setCurrentStep((prev) => prev + 1);
-  const prevStep = () => setCurrentStep((prev) => prev - 1);
 
   useEffect(() => {
     Prism.highlightAll();
@@ -38,44 +35,9 @@ export default function UploadDocumentLlama() {
 
   return (
     <BasePageContainer breadcrumb={breadcrumb}>
-      <Steps current={currentStep} direction="vertical">
-        <Step
-          title={
-            <span className="block font-bold font-poppins">
-              Upload Document Llama
-            </span>
-          }
-          description={
-            <span className="block font-medium font-lato">
-              This API endpoint facilitates the upload of PDF documents for
-              further processing. Upon uploading a PDF document, the API
-              extracts text and tables from the document, stores the embedded
-              content, and detects the language of the text using Supabase.
-            </span>
-          }
-          onClick={() => setCurrentStep(0)}
-        />
-        <Step
-          title={
-            <span className="block font-bold font-poppins">
-              Store Structured Data
-            </span>
-          }
-          description={
-            <span className="block font-medium font-lato">
-              This API endpoint serves the purpose of storing structured data
-              obtained from various sources. It retrieves a title from the
-              request body, obtains embedding data from Pinecone, retrieves text
-              from Pinecone using nearest finding, generates a base prompt for
-              GPT-4, and finally stores the result in Supabase for further
-              processing or analysis.
-            </span>
-          }
-          onClick={() => setCurrentStep(1)}
-        />
-      </Steps>
-      {currentStep === 0 && <UploadDoc nextStep={nextStep} />}
-      {currentStep === 1 && <StoreDoc prevStep={prevStep} />}
+    
+       <UploadDoc />
+     
     </BasePageContainer>
   );
 }
