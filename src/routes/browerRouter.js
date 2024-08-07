@@ -16,6 +16,7 @@ import Redirect from "../components/layout/Redirect";
 import RequireAuth from "./RequireAuth";
 import NotFoundPage from "../components/error/NotFoundPage";
 import Settings from "../components/settings";
+import Companies from '../components/companies'
 
 //Load Pages
 const Dashboard = loadable(() => import("../components/dashboard"), {
@@ -102,6 +103,10 @@ export const browserRouter = createBrowserRouter([
       {
         path: webRoutes.settings,
         element: <Settings />,
+      },
+      {
+        path: webRoutes.companies,
+        element: <Companies />,
       },
     ],
   },

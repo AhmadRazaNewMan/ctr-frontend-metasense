@@ -5,7 +5,7 @@ import { IoDocumentsOutline } from "react-icons/io5";
 import Icon, { UserOutlined } from "@ant-design/icons";
 import { TbReportSearch } from "react-icons/tb";
 import { CiSettings } from "react-icons/ci";
-
+// import { TbReportSearch } from "react-icons/tb";
 
 
 export const sidebar = [
@@ -58,6 +58,12 @@ export const sidebar = [
   name: "Settings",
   icon: <CiSettings />
   ,
+},
+{
+  path: webRoutes.companies,
+  key: webRoutes.companies,
+  name: "Companies",
+  icon: <TbReportSearch />,
 },
 
 ];

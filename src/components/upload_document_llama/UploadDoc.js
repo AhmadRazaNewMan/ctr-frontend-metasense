@@ -45,6 +45,7 @@ export default function UploadDoc() {
   useEffect(() => {
     if (Object.keys(jobStatus).length !== 0) {
       setJobStatusState(jobStatus);
+      
     }
   }, [jobStatus]);
 

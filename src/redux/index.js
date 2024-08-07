@@ -13,6 +13,11 @@ import {
 } from "./reducers/documentReducers";
 
 import {
+  fetchCompaniesWithoutPDFReducer,
+  scrapPDFReducer,
+} from "./reducers/companiesReducer";
+
+import {
   getUsersReducer,
   getSpecificUserReducer,
   editProfileReducer,
@@ -31,6 +36,9 @@ const rootReducers = combineReducers({
   getSpecificUserReducer,
   editProfileReducer,
   uploadImageReducer,
+
+  fetchCompaniesWithoutPDFReducer,
+  scrapPDFReducer,
 });
 
 const middlewares = [thunkMiddleware];

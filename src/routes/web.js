@@ -11,4 +11,5 @@ export const webRoutes = {
   document: "/document",
   reports:"/reports",
   settings: "/settings",
+  companies: "/companies"
 };

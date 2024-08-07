@@ -150,6 +150,9 @@ export const checkJobStatus = () => {
         });
 
         jobStatus = statusResponse.data;
+         // Log the jobProcessed value to the console
+        //  console.log(`Job Processed: ${jobStatus.jobProcessed}%`);
+
       } while (jobStatus.status === "ONGOING");
 
       if (jobStatus.status === true) {
