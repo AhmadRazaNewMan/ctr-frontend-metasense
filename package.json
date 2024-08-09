@@ -2,7 +2,7 @@
   "name": "cti-admin",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://cti-backend.azurewebsites.net",
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "@ant-design/pro-components": "^2.6.52",
     "@loadable/component": "^5.16.3",

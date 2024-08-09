@@ -1,17 +1,16 @@
-
 import React, { useState, useEffect } from "react";
-import { Button, Modal, Table } from "antd";
+import { Button, Modal, Table, Spin } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
-import { BASE_URL } from "../../redux/constants/constants";
-import { getStructuredDocuments } from "../../redux/methods/documentMethods";
 import { toast } from "sonner";
-// import {format}
 
 // Components
 import BasePageContainer from "../layout/PageContainer";
 import { webRoutes } from "../../routes/web";
-import { fetchCompaniesWithoutPDF, scrapPDFs } from "../../redux/methods/companiesMethods";
+import {
+  fetchCompaniesWithoutPDF,
+  scrapPDFs,
+} from "../../redux/methods/companiesMethods";
+import { checkJobStatus } from "../../redux/methods/documentMethods";
 
 const breadcrumb = {
   items: [
@@ -27,89 +26,62 @@ const breadcrumb = {
 };
 
 export default function Reports() {
+  const [loadingButtons, setLoadingButtons] = useState({}); // State to track the loading and disabled status of each button
   const dispatch = useDispatch();
   const { companiesWithoutPDFs, loading } = useSelector(
     (state) => state.fetchCompaniesWithoutPDFReducer
   );
-  
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentRecord, setCurrentRecord] = useState(null);
+  const { jobStatus, errors } = useSelector(
+    (state) => state.uploadDocumentReducer
+  );
+
+  useEffect(() => {
+    if (errors.length > 0) {
+      errors.forEach((err) => {
+        if (err.response) {
+          toast.error(err.response.data.msg);
+        } else {
+          toast.error(err.message);
+        }
+      });
+    }
+  }, [errors]);
 
   useEffect(() => {
     dispatch(fetchCompaniesWithoutPDF());
-    
   }, [dispatch]);
 
-  const handleSeeChanges = (record) => {
-    console.log(JSON.stringify(record)+"...........checking the whole record for the Year Fieid")
-    setCurrentRecord(record);
-    setIsModalVisible(true);
-  };
+  useEffect(() => {
+    const interval = setInterval(() => {
+      dispatch(checkJobStatus());
+    }, 5000); // Poll every 5 seconds
 
-  const scrapData = (_,record) => { 
-    console.log(".......year_of_emission........"+JSON.stringify(record))
-    console.log("Year and Name in Frontend .......................... in companiesMethod.js "+record.company_name,record.year_of_emissions)
-    console.log("Year and Name in Frontend .......................... in companiesMethod.js "+record)
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
-     dispatch(scrapPDFs(record.company_name,record.year_of_emissions))
-   }
-
-  const handleAcceptChanges = async () => {
-    try {
-      const response = await axios.post(`${BASE_URL}/api/document/accept-changes`, {
-        id: currentRecord.id,
-      });
-      if (response.data.status) {
-        toast.success("Changes accepted successfully");
-        setIsModalVisible(false);
-        dispatch(getStructuredDocuments());
-      } else {
-        toast.error("Failed to accept changes");
-      }
-    } catch (error) {
-      console.error("Error accepting changes:", error);
-      toast.error("Error accepting changes");
+  useEffect(() => {
+    if (jobStatus && jobStatus.company_name) {
+      setLoadingButtons((prev) => ({
+        ...prev,
+        [jobStatus.company_name]: {
+          loading: jobStatus.status !== "ONGOING",
+          disabled: jobStatus.status === "ONGOING" || jobStatus.status === "COMPLETE",
+        },
+      }));
     }
-  };
+  }, [jobStatus]);
 
-  const handleRejectChanges = async () => {
-    try {
-      const response = await axios.post(`${BASE_URL}/api/document/reject-changes`, {
-        id: currentRecord.id,
-      });
-      if (response.data.status) {
-        toast.success("Changes rejected successfully");
-        setIsModalVisible(false);
-        dispatch(getStructuredDocuments());
-      } else {
-        toast.error("Failed to reject changes");
-      }
-    } catch (error) {
-      console.error("Error rejecting changes:", error);
-      toast.error("Error rejecting changes");
-    }
-  };
+  // const handleSeeChanges = (record) => {
+  //   setCurrentRecord(record);
+  // };
 
-  const getFieldData = (record) => {
-    const testingColumns = ['testing_column']; // Fields to include
-    let oldData = {};
-
-    try {
-      oldData = record.testing_column ? JSON.parse(record.testing_column) : {};
-    } catch (error) {
-      console.warn("Error parsing old data:", error);
-    }
-
-    const fieldNames = Object.keys(record).filter(key => !testingColumns.includes(key));
-    
-    return fieldNames.map((key) => ({
-      key,
-      oldValue: oldData[key] !== undefined ? oldData[key] : record[key],
-      newValue: record[key] !== undefined ? record[key] : '-',
+  const scrapData = (_, record) => {
+    setLoadingButtons((prev) => ({
+      ...prev,
+      [record.company_name]: { loading: true, disabled: false },
     }));
+    dispatch(scrapPDFs(record.company_name, record.year_of_emissions));
   };
-
-  const fieldData = currentRecord ? getFieldData(currentRecord) : [];
 
   const columns = [
     {
@@ -123,17 +95,17 @@ export default function Reports() {
       key: "id",
     },
     {
-      title: 'Created At',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      title: "Created At",
+      dataIndex: "created_at",
+      key: "created_at",
       render: (text) => {
         const date = new Date(text);
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based, so we add 1
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
         const formattedDate = `${year}-${month}-${day}`;
         const formattedTime = `${hours}:${minutes}:${seconds}`;
         return (
@@ -145,25 +117,26 @@ export default function Reports() {
       },
     },
     {
-      title: "Reported by Admin",
-      dataIndex: "reported_by_admin",
-      key: "reported_by_admin",
-      render: (_, record) => (
-        <Button type="link" onClick={() => handleSeeChanges(record)}>
-          See the Changes
-        </Button>
-      ),
+      title: "Fetch PDF",
+      dataIndex: "fetch_pdf",
+      key: "fetch_pdf",
+      render: (_, record) => {
+        const isLoading = loadingButtons[record.company_name]?.loading;
+        const isDisabled = loadingButtons[record.company_name]?.disabled;
+
+        return (
+          <Button
+            onClick={() => scrapData(_, record)}
+            className={`bg-black text-white p-2 rounded-md ${
+              isDisabled ||isLoading ? "cursor-not-allowed bg-white" : ""
+            }`}
+            disabled={jobStatus.status==="ONGOING"}
+          >
+            {isLoading ? <Spin /> : "Fetch"}
+          </Button>
+        );
+      },
     },
-    {
-      title:"Fetch PDF",
-      dataIndex:"fetch_pdf",
-      key:"fetch_pdf",
-      render:(_,record)=>(
-         <button onClick={()=>scrapData(_,record)} className="bg-black text-white p-2 rounded-md">Fetch </button>
-
-      )
-
-    }
   ];
 
   return (
@@ -172,53 +145,8 @@ export default function Reports() {
         columns={columns}
         dataSource={companiesWithoutPDFs}
         rowKey="id"
-        // loading={loading}
+        loading={loading}
       />
-
-      <Modal
-        visible={isModalVisible}
-        title="Review Changes"
-        onCancel={() => setIsModalVisible(false)}
-        footer={[
-          <Button
-            key="accept"
-            type="primary"
-            onClick={handleAcceptChanges}
-            className="bg-black text-white"
-          >
-            Accept Changes
-          </Button>,
-          <Button
-            key="reject"
-            onClick={handleRejectChanges}
-            className="bg-black text-white"
-          >
-            Reject Changes
-          </Button>,
-        ]}
-        className="max-w-4xl max-h-[80vh] overflow-auto"
-      >
-        {currentRecord && (
-          <div className="p-4 max-h-[60vh] overflow-y-auto">
-            <div className="flex flex-col">
-              <div className="flex font-bold bg-gray-200 border-b border-gray-300">
-                <div className="flex-1 p-2 border-r border-gray-300 truncate">Field Name</div>
-                <div className="flex-1 p-2 border-r border-gray-300 truncate">Old Data</div>
-                <div className="flex-1 p-2 truncate">New Data</div>
-              </div>
-              {fieldData.map(({ key, oldValue, newValue }) => (
-                <div className="flex border-b border-gray-300" key={key}>
-                  <div className="flex-1 p-2 border-r border-gray-300 truncate">{key}</div>
-                  <div className="flex-1 p-2 border-r border-gray-300 truncate">{oldValue}</div>
-                  <div className="flex-1 p-2 truncate">{newValue}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </Modal>
     </BasePageContainer>
   );
 }
-
-
